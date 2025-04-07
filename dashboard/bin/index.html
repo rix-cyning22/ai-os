@@ -1,0 +1,268 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>System Monitor</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: 'Inter', 'Segoe UI', sans-serif;
+            background-color: #121212;
+            color: #f5f5f5;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            overflow: hidden;
+        }
+
+        h1 {
+            font-size: 2.5rem;
+            color: #ffffff;
+            margin-bottom: 40px;
+            text-align: center;
+        }
+
+        .container {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 20px;
+            width: 100%;
+            max-width: 1200px;
+        }
+
+        .card {
+            background-color: #1c1c1c;
+            padding: 20px;
+            border-radius: 12px;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.4);
+            transition: background 0.3s ease;
+            height: 250px;
+        }
+
+        .card:hover {
+            background-color: #232323;
+        }
+
+        .card h2 {
+            font-size: 1.3rem;
+            margin-bottom: 15px;
+            color: #03dac5;
+        }
+
+        .progress-bar {
+            width: 100%;
+            height: 15px;
+            border-radius: 10px;
+            background-color: #333;
+            margin-top: 10px;
+            position: relative;
+        }
+
+        .progress {
+            height: 100%;
+            border-radius: 10px;
+        }
+
+        .label {
+            font-size: 1rem;
+            color: #bbbbbb;
+            margin-top: 5px;
+            display: inline-block;
+        }
+
+        .value {
+            font-size: 1.5rem;
+            font-weight: 600;
+            color: #ffffff;
+            text-align: center;
+            margin-top: 10px;
+        }
+
+        .details {
+            font-size: 1rem;
+            color: #aaaaaa;
+            margin-top: 5px;
+            display: inline-block;
+        }
+
+        .progress-container {
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            height: 100%;
+        }
+
+        .progress-container .label {
+            margin-right: 10px;
+            padding-left: 10px;
+        }
+
+        .progress-text {
+            position: absolute;
+            left: 10px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: #ffffff;
+            font-weight: 600;
+        }
+
+        .card > .progress-container > .progress-bar {
+            margin-top: 10px;
+        }
+
+        /* Button Styles */
+        .btn {
+            display: inline-block;
+            padding: 12px 24px;
+            background-color: #03dac5;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 1rem;
+            font-weight: 600;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin-top: 20px;
+        }
+
+        .btn:hover {
+            background-color: #018786;
+            transform: translateY(-2px);
+        }
+
+        .btn:active {
+            background-color: #00b8a9;
+            transform: translateY(2px);
+        }
+
+        .btn:disabled {
+            background-color: #aaa;
+            cursor: not-allowed;
+        }
+    </style>
+</head>
+<body>
+    <h1>📊 System Resource Monitor</h1>
+    <button class="btn" onclick="plotGraph()">See Resource Activity</button>
+    <button class="btn" onclick="downloadLog()">Download Data</button>
+
+        <div class="container">
+            <div class="card">
+                <div class="progress-container">
+                    <h2>🧠 CPU</h2>
+                    <div class="progress-bar">
+                        <div class="progress" id="cpu-usage" style="background-color: #03dac5;"></div>
+                        <div class="progress-text" id="cpu-usage-text">--%</div>
+                    </div>
+                    <div class="label" id="cpu-cores">Cores: --</div>
+                    <div class="details" id="cpu-model">Model: --</div>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="progress-container">
+                    <h2>💾 Memory</h2>
+                    <div class="progress-bar">
+                        <div class="progress" id="memory-percent" style="background-color: #ffcc00;"></div>
+                        <div class="progress-text" id="memory-percent-text">--%</div>
+                    </div>
+                    <div class="label" id="memory-used">Used: --</div>
+                    <div class="details" id="memory-total">Total: --</div>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="progress-container">
+                    <h2>📀 Disk</h2>
+                    <div class="progress-bar">
+                        <div class="progress" id="disk-percent" style="background-color: #ff6666;"></div>
+                        <div class="progress-text" id="disk-percent-text">--%</div>
+                    </div>
+                    <div class="label" id="disk-used">Used: --</div>
+                    <div class="details" id="disk-mount">Mount: --</div>
+                </div>
+            </div>
+
+            <div class="card" id="gpu-card" style="display:none;">
+                <div class="progress-container">
+                    <h2>🎮 GPU</h2>
+                    <div class="progress-bar">
+                        <div class="progress" id="gpu-load" style="background-color: #6200ea;"></div>
+                        <div class="progress-text" id="gpu-load-text">--%</div>
+                    </div>
+                    <div class="label" id="gpu-memory">Mem: --</div>
+                    <div class="details" id="gpu-names">GPU: --</div>
+                </div>
+            </div>
+        </div>
+
+        <script>
+            async function formatBytes(bytes) {
+                const sizes = ['B', 'KB', 'MB', 'GB', 'TB'];
+                if (bytes === 0) return '0 B';
+                const i = parseInt(Math.floor(Math.log(bytes) / Math.log(1024)));
+                return (bytes / Math.pow(1024, i)).toFixed(1) + ' ' + sizes[i];
+            }
+
+            async function loadData() {
+                try {
+                    const res = await fetch("/api/resources");
+                    const data = await res.json();
+
+                    // CPU
+                    document.getElementById("cpu-usage").style.width = data.cpu.usage + "%";
+                    document.getElementById("cpu-usage-text").textContent = data.cpu.usage + "%";
+                    document.getElementById("cpu-cores").textContent = "Cores: " + data.cpu.cores;
+                    document.getElementById("cpu-model").textContent = "Model: " + data.cpu.model;
+
+                    // Memory
+                    document.getElementById("memory-percent").style.width = data.memory.percent + "%";
+                    document.getElementById("memory-percent-text").textContent = data.memory.percent + "%";
+                    document.getElementById("memory-used").textContent = "Used: " + await formatBytes(data.memory.used) + " / " + await formatBytes(data.memory.total);
+                    document.getElementById("memory-total").textContent = "Total: " + await formatBytes(data.memory.total);
+
+                    // Disk
+                    document.getElementById("disk-percent").style.width = data.disk.percent + "%";
+                    document.getElementById("disk-percent-text").textContent = data.disk.percent + "%";
+                    document.getElementById("disk-used").textContent = "Used: " + await formatBytes(data.disk.used) + " / " + await formatBytes(data.disk.total);
+                    document.getElementById("disk-mount").textContent = "Mount: " + data.disk.mount;
+
+                    // GPU
+                    if (data.gpu && data.gpu.length > 0) {
+                        let gpuText = data.gpu.map(gpu => `${gpu.name}`).join(", ");
+                        document.getElementById("gpu-load").style.width = Math.round(data.gpu[0].load) + "%";
+                        document.getElementById("gpu-load-text").textContent = Math.round(data.gpu[0].load) + "%";
+                        document.getElementById("gpu-memory").textContent = "Mem: " + await formatBytes(data.gpu[0].memoryUsed) + " / " + await formatBytes(data.gpu[0].memoryTotal);
+                        document.getElementById("gpu-names").textContent = "GPU: " + gpuText;
+                        document.getElementById("gpu-card").style.display = "block";
+                    } else {
+                        document.getElementById("gpu-card").style.display = "none";
+                    }
+
+                } catch (err) {
+                    console.error("Failed to load data", err);
+                }
+            }
+
+            function downloadLog() {
+                window.location.href = '/download_log';
+            }
+
+            function plotGraph() {
+                window.location.href = '/plot_graph';
+            }
+
+            loadData();
+            setInterval(loadData, 2000);
+        </script>
+    </body>
+</html>
