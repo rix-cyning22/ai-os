@@ -28,8 +28,8 @@ def get_gpu_usage():
         {
             "id": gpu.id,
             "name": gpu.name,
-            "memoryUsed": gpu.memoryUsed,
-            "memoryTotal": gpu.memoryTotal,
+            "memoryUsed": gpu.memoryUsed * 1024 * 1024,
+            "memoryTotal": gpu.memoryTotal * 1024 * 1024,
             "load": gpu.load * 100,  # This will be the GPU usage percentage
         } for gpu in gpus
     ] if gpus else []
